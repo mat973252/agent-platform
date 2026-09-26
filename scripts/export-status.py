@@ -107,12 +107,18 @@ def map_run(summary, snapshot):
 
 
 def health_for(runs, attention):
+    """Conservative health: `ok` only when every sampled run reports a source-backed success."""
     if attention:
         return {"state": "attention",
                 "summary": f"{len(attention)} of {len(runs)} sampled runs need attention; local demo runs only."}
-    if runs:
-        return {"state": "ok", "summary": f"{len(runs)} sampled local demo runs report no pending or failed signals."}
-    return {"state": "unknown", "summary": "No runs are visible in the local run list."}
+    if not runs:
+        return {"state": "unknown", "summary": "No runs are visible in the local run list."}
+    if all(run["status"] == "succeeded" for run in runs):
+        return {"state": "ok",
+                "summary": f"All {len(runs)} sampled local demo runs reported a succeeded business result."}
+    unresolved = sum(1 for run in runs if run["status"] != "succeeded")
+    return {"state": "unknown",
+            "summary": f"{unresolved} of {len(runs)} sampled runs have no reported business result yet."}
 
 
 def build_status(listing, snapshots, generated_at, project_id, project_name, ttl_seconds):
@@ -138,17 +144,26 @@ def build_status(listing, snapshots, generated_at, project_id, project_name, ttl
     return document
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow redirects: urllib copies Authorization onto the redirected request,
+    which would send the operator credential to whatever origin the response names."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "redirect not followed", headers, fp)
+
+
 class ApiClient:
     def __init__(self, base_url, username, password, timeout=10):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         token = base64.b64encode(f"{username}:{password}".encode()).decode()
         self._headers = {"Accept": "application/json", "Authorization": "Basic " + token}
+        self._opener = urllib.request.build_opener(NoRedirect)
 
     def get(self, path, query=None):
         url = self.base_url + path + ("?" + urllib.parse.urlencode(query) if query else "")
         request = urllib.request.Request(url, headers=self._headers, method="GET")
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+        with self._opener.open(request, timeout=self.timeout) as response:
             return json.loads(response.read().decode())
 
     def listing(self, limit):

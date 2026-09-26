@@ -10,7 +10,10 @@ import json
 import pathlib
 import re
 import sys
+import threading
 import unittest
+import urllib.error
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SPEC = importlib.util.spec_from_file_location(
     "export_status", pathlib.Path(__file__).with_name("export-status.py"))
@@ -86,6 +89,29 @@ class StatusExportTest(unittest.TestCase):
         self.assertEqual(document["attention"], [])
         self.assertEqual(document["health"]["state"], "ok")
 
+    def test_unrecognized_business_state_does_not_become_ok(self):
+        # A snapshot exists but its state is missing or unknown to this exporter:
+        # the run is unknown and health must not claim success.
+        for state in (None, "MISSING", ""):
+            with self.subTest(state=state):
+                document = build([run_summary("run-s1", "COMPLETED")],
+                                 {"run-s1": {"state": state} if state is not None else {}})
+                self.assertEqual(document["runs"][0]["status"], "unknown")
+                self.assertEqual(document["health"]["state"], "unknown")
+
+    def test_running_only_sample_is_unknown_not_ok(self):
+        document = build([run_summary("run-s2", "RUNNING")], {"run-s2": snapshot("RUNNING")})
+        self.assertEqual(document["runs"][0]["status"], "running")
+        self.assertEqual(document["attention"], [])
+        self.assertEqual(document["health"]["state"], "unknown")
+
+    def test_mixed_succeeded_and_unknown_sample_is_unknown(self):
+        document = build(
+            [run_summary("run-s3", "COMPLETED"), run_summary("run-s4", "RUNNING")],
+            {"run-s3": snapshot("SUCCEEDED"), "run-s4": snapshot("RUNNING")})
+        self.assertEqual(document["health"]["state"], "unknown")
+        self.assertIn("1 of 2", document["health"]["summary"])
+
     def test_ambiguous_completed_execution_reports_unknown(self):
         # Execution COMPLETED but the snapshot cannot be read: no invented business status.
         document = build([run_summary("run-e5f6", "COMPLETED")], {})
@@ -149,6 +175,68 @@ class StatusExportTest(unittest.TestCase):
         self.assertEqual(len(document["runs"]), 1)
         self.assertEqual(document["runs"][0]["id"], "run-q7r8")
         self.assertEqual(document["runs"][0]["status"], "unknown")
+
+
+class RecordingHandler(BaseHTTPRequestHandler):
+    """Second origin: records whether an Authorization header ever arrives."""
+
+    received = []
+
+    def do_GET(self):
+        RecordingHandler.received.append(dict(self.headers))
+        body = b'{"runs": []}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+
+def redirecting_handler(target):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(302)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    return Handler
+
+
+class CredentialLeakTest(unittest.TestCase):
+    """A redirect must not carry the operator Basic credential to another origin."""
+
+    def setUp(self):
+        RecordingHandler.received = []
+        self.other = ThreadingHTTPServer(("127.0.0.1", 0), RecordingHandler)
+        other_url = f"http://127.0.0.1:{self.other.server_address[1]}/api/runs"
+        self.api = ThreadingHTTPServer(("127.0.0.1", 0), redirecting_handler(other_url))
+        for server in (self.other, self.api):
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.base_url = f"http://127.0.0.1:{self.api.server_address[1]}"
+
+    def tearDown(self):
+        for server in (self.other, self.api):
+            server.shutdown()
+            server.server_close()
+
+    def test_redirect_is_not_followed_and_credential_is_not_forwarded(self):
+        client = EXPORTER.ApiClient(self.base_url, "operator", "test-only-value")
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            client.listing(20)
+        self.assertEqual(raised.exception.code, 302)
+        self.assertEqual(RecordingHandler.received, [])
+
+    def test_snapshot_redirect_is_reported_as_unknown_without_leaking(self):
+        client = EXPORTER.ApiClient(self.base_url, "operator", "test-only-value")
+        self.assertIsNone(client.snapshot("run-redirect"))
+        self.assertEqual(RecordingHandler.received, [])
 
 
 if __name__ == "__main__":

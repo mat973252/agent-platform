@@ -126,7 +126,7 @@ export PLATFORM_OPERATOR_PASSWORD=…   # 不要把口令写进命令行参数�
 python3 scripts/export-status.py --base-url http://127.0.0.1:9090
 ```
 
-`health` 只描述本次可见的本地演示 Run 列表（空列表为 `unknown`），不是生产就绪声明；`progress` 与 `milestones` 在没有可信来源时不输出。run 的 `status` 由 Temporal `executionStatus` 与业务 `state` 分别决定，`COMPLETED` 不会未经业务结果就被当作 `succeeded`；`attention` 仅记录等待审批、待核验、人工关闭未知与失败的 Run。确定性映射测试为 `python3 scripts/export-status-test.py`，不依赖运行中的服务。浏览器查看时由操作者自行用带 `Access-Control-Allow-Origin: *` 的本地静态服务器承载该文件，再交给 mat-console 的 `?url=` 适配；本文档不发布状态数据。
+`health` 只描述本次可见的本地演示 Run 列表，不是生产就绪声明：只有抽样 Run 全部为来源可证的 `succeeded` 才是 `ok`，出现待处理信号为 `attention`，空列表、仅运行中、业务结果缺失或不可识别、以及混合结果都为 `unknown`；`progress` 与 `milestones` 在没有可信来源时不输出。run 的 `status` 由 Temporal `executionStatus` 与业务 `state` 分别决定，`COMPLETED` 不会未经业务结果就被当作 `succeeded`；`attention` 仅记录等待审批、待核验、人工关闭未知与失败的 Run。脚本对已认证请求禁用重定向跟随（urllib 会把 `Authorization` 复制到跳转后的请求），3xx 按安全失败处理，不打印响应正文或凭据。确定性测试为 `python3 scripts/export-status-test.py`，除本机回环重定向用例外不依赖运行中的服务。浏览器查看时由操作者自行用带 `Access-Control-Allow-Origin: *` 的本地静态服务器承载该文件，再交给 mat-console 的 `?url=` 适配；本文档不发布状态数据。
 
 ## 离线 Agent 循环
 

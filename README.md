@@ -117,6 +117,17 @@ Step 对应一次 Temporal Activity 调度，以 `scheduledEventId` 和 `activit
 
 新增投影和 SSE 仅保存时间、状态、受控标识及关联关系，不复制 evidence、runbook、模型原文、异常正文、Worker identity 或凭据。原始 Temporal 历史、预算决策缓存及原审批/操作 API 的保留与权限边界未因此改变。
 
+## 导出 mat-console 项目状态
+
+`scripts/export-status.py` 用本机 operator 账户读取 `GET /api/runs` 与 `GET /api/runs/{runId}`，生成一份 [mat-console.status/1](https://github.com/mat973252/mat-console/blob/main/docs/protocol-v1.md) JSON 到本地文件（默认 `var/mat-console-status.json`，已被 git 忽略）。它只复制允许列出的枚举字段与时间，不导出证据、工具输出、模型原文、异常、身份或凭据，不新增未认证路由。只读导出不改变 Workflow/Activity 执行语义。
+
+```bash
+export PLATFORM_OPERATOR_PASSWORD=…   # 不要把口令写进命令行参数或 URL
+python3 scripts/export-status.py --base-url http://127.0.0.1:9090
+```
+
+`health` 只描述本次可见的本地演示 Run 列表，不是生产就绪声明：只有抽样 Run 全部为来源可证的 `succeeded` 才是 `ok`，出现待处理信号为 `attention`，空列表、仅运行中、业务结果缺失或不可识别、以及混合结果都为 `unknown`；`progress` 与 `milestones` 在没有可信来源时不输出。run 的 `status` 由 Temporal `executionStatus` 与业务 `state` 分别决定，`COMPLETED` 不会未经业务结果就被当作 `succeeded`；`attention` 仅记录等待审批、待核验、人工关闭未知与失败的 Run。脚本对已认证请求禁用重定向跟随（urllib 会把 `Authorization` 复制到跳转后的请求），3xx 按安全失败处理，不打印响应正文或凭据。确定性测试为 `python3 scripts/export-status-test.py`，除本机回环重定向用例外不依赖运行中的服务。`scripts/smoke.py` 在真实容器/API 生命周期内额外调用一次该脚本，断言导出文档的契约头、已知 SUCCEEDED/CANCELLED Run 的映射以及不含禁止字段；确定性契约映射证据与真实容器证据分开记录。浏览器查看时由操作者自行用带 `Access-Control-Allow-Origin: *` 的本地静态服务器承载该文件，再交给 mat-console 的 `?url=` 适配；本文档不发布状态数据。
+
 ## 离线 Agent 循环
 
 新 Run 读取合成证据与 `orders-runbook-v1`，由独立 `plan` Activity 返回严格的 [决策契约](platform-api/src/main/resources/agent/decision-v1.schema.json)。模型只能请求 `evidence.read`、`ops.restart`、`ops.verify`，参数必须精确为当前 orders 服务；`FINISH` 和 `NEED_CONTEXT` 不能携带工具。额外字段、重复 JSON 字段、尾随内容、未知工具、授权参数或其他资源均拒绝。

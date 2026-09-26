@@ -142,6 +142,7 @@ Spring AI CI（2026-09-09）：[GitHub Actions](https://github.com/mat973252-cod
 - [x] 建立业务 Run/Step/Attempt 查询视图，明确与 Temporal 历史的映射及修复方式。Step 为 Activity 调度，Attempt 来源边界见下。
 - [x] 设计事件 ID 与顺序、幂等写入和断线重连游标；SSE 仅负责传输。
 - [x] PostgreSQL 业务 schema 使用版本化迁移，不与 Temporal 内部表混用。V5 保存历史元数据投影。
+- [x] 提供 `scripts/export-status.py`：经本机已认证 operator 账户只读导出 `mat-console.status/1` JSON 到本地文件；不新增未认证路由、不发布状态数据，浏览器 `?url=` 联调由操作者本地 CORS 静态托管。
 - [ ] 大结果/Artifact 通过引用存储，控制工作流历史和 payload 大小。
 - [ ] 关联 Run、Activity、工具调用与审批的 trace ID。
 - [ ] 记录成功率、耗时、重试次数、审批等待、工具错误和预算使用。

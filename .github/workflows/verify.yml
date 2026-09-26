@@ -28,6 +28,8 @@ jobs:
         run: python3 scripts/bootstrap-agentpermit.py
       - name: Build and test
         run: ./mvnw -B -ntp verify
+      - name: Check status exporter mapping tests
+        run: python3 scripts/export-status-test.py
       - name: Validate local deployment
         run: docker compose config --quiet
       - name: Start Temporal and approval PostgreSQL databases

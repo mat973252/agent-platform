@@ -110,7 +110,7 @@ class StatusExportTest(unittest.TestCase):
             [run_summary("run-s3", "COMPLETED"), run_summary("run-s4", "RUNNING")],
             {"run-s3": snapshot("SUCCEEDED"), "run-s4": snapshot("RUNNING")})
         self.assertEqual(document["health"]["state"], "unknown")
-        self.assertIn("1 of 2", document["health"]["summary"])
+        self.assertEqual(document["health"]["summary"], "1 of 2 sampled runs are not reported succeeded.")
 
     def test_ambiguous_completed_execution_reports_unknown(self):
         # Execution COMPLETED but the snapshot cannot be read: no invented business status.

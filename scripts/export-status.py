@@ -118,7 +118,7 @@ def health_for(runs, attention):
                 "summary": f"All {len(runs)} sampled local demo runs reported a succeeded business result."}
     unresolved = sum(1 for run in runs if run["status"] != "succeeded")
     return {"state": "unknown",
-            "summary": f"{unresolved} of {len(runs)} sampled runs have no reported business result yet."}
+            "summary": f"{unresolved} of {len(runs)} sampled runs are not reported succeeded."}
 
 
 def build_status(listing, snapshots, generated_at, project_id, project_name, ttl_seconds):

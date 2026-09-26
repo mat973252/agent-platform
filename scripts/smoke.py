@@ -4,9 +4,11 @@ import argparse
 import base64
 import json
 import os
+import re
 import secrets
 import socket
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -95,6 +97,45 @@ def assert_run_listing(base, expected):
             return
         time.sleep(0.2)
     raise AssertionError("Temporal visibility did not expose the smoke Runs")
+
+
+def assert_status_export(root, base, succeeded_run_id, cancelled_run_id):
+    """Run the real exporter against this live API and check the produced document."""
+    output = root / "var/mat-console-status.json"
+    deadline = time.monotonic() + 30
+    while True:
+        subprocess.run([sys.executable, str(root / "scripts/export-status.py"), "--base-url", base,
+                        "--limit", "100", "--output", str(output)], cwd=root, check=True, capture_output=True)
+        document = json.loads(output.read_text(encoding="utf-8"))
+        exported = {run["id"]: run for run in document["runs"]}
+        if succeeded_run_id in exported and cancelled_run_id in exported:
+            break
+        if time.monotonic() >= deadline:
+            raise AssertionError("Temporal visibility did not expose the smoke Runs to the exporter")
+        time.sleep(0.2)
+    assert document["contract"] == "mat-console.status/1"
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})", document["generated_at"])
+    assert document["project"]["id"] and document["project"]["name"]
+    assert exported[succeeded_run_id]["status"] == "succeeded"
+    assert exported[cancelled_run_id]["status"] == "cancelled"
+    assert document["health"]["state"] in ("ok", "attention", "degraded", "unknown")
+    assert "progress" not in document and "milestones" not in document
+    forbidden = re.compile(r"(secret|token|passw(?:or)?d|credential|api[_-]?key|bearer|private[_-]?key"
+                           r"|evidence$|output|approvalId|operationId|executionId|agent)", re.IGNORECASE)
+    def walk(node, path="$"):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                assert not forbidden.search(key), f"Forbidden key {path}.{key} in exported status"
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                walk(value, f"{path}[{index}]")
+    walk(document)
+    serialized = json.dumps(document)
+    assert "TEST_LEDGER_RESTART" not in serialized and "Basic " not in serialized
+    assert os.environ["PLATFORM_OPERATOR_PASSWORD"] not in serialized
+    print(f"PASS mat-console status export: {len(document['runs'])} runs from the live API; "
+          f"{succeeded_run_id} mapped to succeeded; health={document['health']['state']}", flush=True)
 
 
 def rebuild_projection(root, base, run_id):
@@ -353,6 +394,8 @@ def main():
             assert_budget_complete(base, lost_response, held=2560, attempts=4)
             print(f"PASS model response crash: {lost_response}; Worker {first_pid} -> {process.pid}; "
                   "unknown attempt remains reserved and retries are charged separately (simulated units)", flush=True)
+
+            assert_status_export(root, base, run_id, cancelled)
         finally:
             if process is not None and process.poll() is None:
                 process.terminate()

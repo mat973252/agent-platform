@@ -23,7 +23,7 @@
       <artifactId>agent-runtime-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.github.mat973252</groupId>
+      <groupId>io.github.agentpermit4j</groupId>
       <artifactId>agent-permit-execution</artifactId>
       <version>${agentpermit.version}</version>
     </dependency>

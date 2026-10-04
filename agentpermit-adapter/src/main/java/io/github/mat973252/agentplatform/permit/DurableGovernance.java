@@ -1,6 +1,6 @@
 package io.github.mat973252.agentplatform.permit;
 
-import io.github.mat973252.agentpermit.approval.InvocationFingerprinter;
+import io.github.agentpermit4j.approval.InvocationFingerprinter;
 import io.github.mat973252.agentplatform.core.ActionResult;
 import io.github.mat973252.agentplatform.core.ActionStatus;
 

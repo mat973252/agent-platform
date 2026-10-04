@@ -1,13 +1,13 @@
 package io.github.mat973252.agentplatform.permit;
 
-import io.github.mat973252.agentpermit.approval.InvocationFingerprinter;
-import io.github.mat973252.agentpermit.core.GateDecision;
-import io.github.mat973252.agentpermit.core.RiskAssessment;
-import io.github.mat973252.agentpermit.core.RiskLevel;
-import io.github.mat973252.agentpermit.execution.InMemoryResultIdempotencyGuard;
-import io.github.mat973252.agentpermit.execution.ResultDecisionPipeline;
-import io.github.mat973252.agentpermit.execution.ResultIdempotencyGuard;
-import io.github.mat973252.agentpermit.execution.ResultToolExecutor;
+import io.github.agentpermit4j.approval.InvocationFingerprinter;
+import io.github.agentpermit4j.core.GateDecision;
+import io.github.agentpermit4j.core.RiskAssessment;
+import io.github.agentpermit4j.core.RiskLevel;
+import io.github.agentpermit4j.execution.InMemoryResultIdempotencyGuard;
+import io.github.agentpermit4j.execution.ResultDecisionPipeline;
+import io.github.agentpermit4j.execution.ResultIdempotencyGuard;
+import io.github.agentpermit4j.execution.ResultToolExecutor;
 import io.github.mat973252.agentplatform.core.ActionResult;
 import io.github.mat973252.agentplatform.core.ActionStatus;
 

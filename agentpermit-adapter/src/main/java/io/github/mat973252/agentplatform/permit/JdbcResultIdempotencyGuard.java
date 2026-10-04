@@ -1,11 +1,11 @@
 package io.github.mat973252.agentplatform.permit;
 
-import io.github.mat973252.agentpermit.approval.InvocationFingerprinter;
-import io.github.mat973252.agentpermit.core.DecisionOutcome;
-import io.github.mat973252.agentpermit.core.DecisionResult;
-import io.github.mat973252.agentpermit.core.ToolInvocation;
-import io.github.mat973252.agentpermit.execution.ResultIdempotencyGuard;
-import io.github.mat973252.agentpermit.execution.ToolExecutionResult;
+import io.github.agentpermit4j.approval.InvocationFingerprinter;
+import io.github.agentpermit4j.core.DecisionOutcome;
+import io.github.agentpermit4j.core.DecisionResult;
+import io.github.agentpermit4j.core.ToolInvocation;
+import io.github.agentpermit4j.execution.ResultIdempotencyGuard;
+import io.github.agentpermit4j.execution.ToolExecutionResult;
 import java.util.function.Supplier;
 
 /** One persistent owner per logical operation; incomplete owners are never replaced. */

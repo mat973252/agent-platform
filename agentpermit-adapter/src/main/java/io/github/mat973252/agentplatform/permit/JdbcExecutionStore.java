@@ -1,7 +1,7 @@
 package io.github.mat973252.agentplatform.permit;
 
-import io.github.mat973252.agentpermit.execution.ToolExecutionResult;
-import io.github.mat973252.agentpermit.core.DecisionOutcome;
+import io.github.agentpermit4j.execution.ToolExecutionResult;
+import io.github.agentpermit4j.core.DecisionOutcome;
 import java.time.Clock;
 import java.util.List;
 import javax.sql.DataSource;

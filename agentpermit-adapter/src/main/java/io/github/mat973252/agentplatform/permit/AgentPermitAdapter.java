@@ -1,7 +1,7 @@
 package io.github.mat973252.agentplatform.permit;
 
-import io.github.mat973252.agentpermit.core.*;
-import io.github.mat973252.agentpermit.execution.ResultDecisionPipeline;
+import io.github.agentpermit4j.core.*;
+import io.github.agentpermit4j.execution.ResultDecisionPipeline;
 import io.github.mat973252.agentplatform.core.ActionResult;
 import io.github.mat973252.agentplatform.core.ActionStatus;
 import java.util.Map;

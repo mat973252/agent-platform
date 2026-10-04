@@ -18,7 +18,7 @@ Java + Temporal 的持久化 Agent 执行基础项目。
 
 ## 构建与测试
 
-需要 JDK 21、Python 3.9+ 和网络。AgentPermit 尚未发布到 Maven Central，先从固定公开提交构建依赖，再验证主项目：
+需要 JDK 21、Python 3.9+ 和网络。本项目从固定公开提交构建 AgentPermit 依赖，再验证主项目：
 
 ```powershell
 python scripts/bootstrap-agentpermit.py
@@ -27,9 +27,9 @@ python scripts/bootstrap-agentpermit.py
 
 Linux/macOS：先运行 `python3 scripts/bootstrap-agentpermit.py`，再运行 `./mvnw -B -ntp verify`。
 
-依赖锁定在 [`.mvn/agentpermit.lock.json`](.mvn/agentpermit.lock.json)：公开提交 `c33911c595e5718b144d2bdb939bb3e23e17c909`、版本 `0.2.0`，下载后校验 SHA-256。脚本构建必要模块并运行其测试；主项目使用 `var/maven-repository` 隔离仓库，不依赖其他 checkout 或用户全局 Maven 缓存。锁定更新后重新运行脚本；不自动跟随远端 main 或本机未发布分支。
+依赖锁定在 [`.mvn/agentpermit.lock.json`](.mvn/agentpermit.lock.json)：公开提交 `9e100cd2bef02c46d18b1ed430e240d751c9b1ac`、版本 `0.5.0`，下载后校验 SHA-256。脚本构建必要模块并运行其测试；主项目使用 `var/maven-repository` 隔离仓库，不依赖其他 checkout 或用户全局 Maven 缓存。锁定更新后重新运行脚本；不自动跟随远端 main 或本机未发布分支。此流程验证锁定源码构建，不是 Maven Central 公共消费者验收。
 
-项目测试覆盖领域校验、真实 AgentPermit 决策、审批绑定/过期/取消竞态、独立数据库连接抢占执行权、下游去重、未知结果及人工关闭、工作流分支、Activity 重试、消息重投、旧历史回放和 HTTP 身份权限。测试中的 Temporal 使用内存服务，业务库使用 H2；真实 PostgreSQL 联调独立验收。依赖自身的 113 项测试单独记录。
+项目测试覆盖领域校验、真实 AgentPermit 决策、审批绑定/过期/取消竞态、独立数据库连接抢占执行权、下游去重、未知结果及人工关闭、工作流分支、Activity 重试、消息重投、旧历史回放和 HTTP 身份权限。测试中的 Temporal 使用内存服务，业务库使用 H2；真实 PostgreSQL 联调独立验收。依赖自身测试单独记录。0.2 → 0.5 兼容测试固定旧版生成的审批指纹，重建 H2 审批/回执后检查执行一次、变参拒绝以及只读核对；详见 [升级验收](docs/permit05-compatibility.md)。
 
 P2 新增严格 JSON/工具参数校验、模型重试、步数上限、读失败后重新规划、完成前核验，以及回放不再次调用模型的测试。默认模型是打包 JSON fixture，不发出模型 API 请求。
 Spring AI 测试使用本地 HTTP 服务模拟响应，验证真实 SDK 请求、用量结算、500/断连接时无隐藏重试，以及完整 API/审批/账本核验流程。CI 不调用付费模型；显式真实服务验收见下。

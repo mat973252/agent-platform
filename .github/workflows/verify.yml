@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -36,6 +36,29 @@ jobs:
         run: docker compose up -d --wait --wait-timeout 180
       - name: Verify Worker, approval database and message recovery
         run: python3 scripts/smoke.py --restart-approval-db
+      - name: Check out the fixed pre-upgrade application
+        uses: actions/checkout@v4
+        with:
+          ref: 664e2886184773d49f952a682d166a658651f071
+          path: var/compat-old-source
+          persist-credentials: false
+      - name: Build the old application with its own locked dependency
+        working-directory: var/compat-old-source
+        run: |
+          python3 scripts/bootstrap-agentpermit.py
+          ./mvnw -B -ntp -DskipTests package
+      - name: Verify recovery from AgentPermit 0.2 to 0.5
+        run: python3 scripts/upgrade-smoke.py --old-jar var/compat-old-source/platform-api/target/platform-api-0.1.0-SNAPSHOT.jar
+      - name: Upload cross-version recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-version-recovery
+          path: |
+            var/p4-upgrade-result.json
+            var/p4-upgrade-application.log
+          if-no-files-found: warn
+          retention-days: 3
       - name: Upload the sanitized status export from this test run
         uses: actions/upload-artifact@v4
         with:
